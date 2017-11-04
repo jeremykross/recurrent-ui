@@ -1,0 +1,28 @@
+/* some style */
+
+html {
+    font-size: 10px;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body, body * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: ubuntu;
+    user-select:none;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+}
+
+
