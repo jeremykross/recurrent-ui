@@ -1,12 +1,12 @@
 (ns recurrent-ui.core
     (:require
       elmalike.mouse
-      recurrent.drivers.css
-      recurrent.drivers.dom
       [dommy.core :as dommy]
       [elmalike.signal :as elmalike]
       [garden.core :as garden]
-      [recurrent.core :as recurrent]))
+      [recurrent.core :as recurrent]
+      [recurrent.drivers.css :include-macros true]
+      [recurrent.drivers.dom :include-macros true]))
 
 (enable-console-print!)
 
@@ -291,29 +291,20 @@
                                     :css-$ (:css-$ sources)})
         switch-toggle (SwitchToggle {:dom-$ (:dom-$ sources)
                                      :css-$ (:css-$ sources)})]
-    {:css-$
-     (elmalike/map
-       identity
-       (elmalike/latest
-         (:css-$ regular-text-input)
-         (:css-$ drop-down)
-         (:css-$ button)
-         (:css-$ range-input)
-         (:css-$ switch-toggle)))
-     :dom-$
-     (elmalike/map
-       (fn [[regular-text-input drop-down button range-input switch-toggle]]
-         `[:div
-           ~regular-text-input
-           ~drop-down
-           ~button
-           ~range-input
-           ~switch-toggle])
-       (elmalike/latest (:dom-$ regular-text-input)
-                        (:dom-$ drop-down)
-                        (:dom-$ button)
-                        (:dom-$ range-input)
-                        (:dom-$ switch-toggle)))}))
+
+    {:css-$ (recurrent.drivers.css/collect :css-$
+              regular-text-input
+              drop-down
+              button
+              range-input
+              switch-toggle)
+     :dom-$ (recurrent.drivers.dom/collect :dom-$ 
+              regular-text-input
+              drop-down
+              button
+              range-input
+              switch-toggle)}))
+
 
 (defn main
   []
