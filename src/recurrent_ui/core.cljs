@@ -53,35 +53,40 @@
 
 (defn Button
   [props sources]
-  {:clicks-$ (((:dom-$ sources) ".button") "click")
-   :css-$ (elmalike/signal-of
-            [:.button {:border "1px solid black"
-                       :cursor "pointer"
-                       :font-family "sans-serif"
-                       :font-size "12px"
-                       :font-weight "bold"
-                       :height "40px"
-                       :line-height "40px"
-                       :letter-spacing "2px"
-                       :text-align "center"
-                       :text-transform "uppercase"}
-             [:&.filled {:color "white" 
-                         :border "none"
-                         :box-shadow "0px 2px 8px rgba(0,0,0,.33)"}]
-             [:&.primary {:background (:primary COLORS)}]
-             [:&.pill {:border-radius "1600px"}]])
-   :dom-$ (elmalike/map
-            (fn [[text]]
-              `[:div {:class ~(str "button" (if (:pill? props) " pill") (if (:primary? props) " filled primary"))} ~text])
-            (elmalike/latest (:text-$ sources)))})
+  (let [scope (gensym)
+        dom-source-$ (recurrent.drivers.dom/isolate-source scope (:dom-$ sources))]
+    {:clicks-$ ((dom-source-$ ".button") "click")
+     :css-$ (elmalike/signal-of
+              [:.button {:border "1px solid black"
+                         :cursor "pointer"
+                         :font-family "sans-serif"
+                         :font-size "12px"
+                         :font-weight "bold"
+                         :height "40px"
+                         :line-height "40px"
+                         :letter-spacing "2px"
+                         :text-align "center"
+                         :text-transform "uppercase"}
+               [:&.filled {:color "white" 
+                           :border "none"
+                           :box-shadow "0px 2px 8px rgba(0,0,0,.33)"}]
+               [:&.primary {:background (:primary COLORS)}]
+               [:&.pill {:border-radius "1600px"}]])
+     :dom-$ (elmalike/map
+              (fn [[text]]
+                `[:div {:class ~(str "button" (if (:pill? props) " pill") (if (:primary? props) " filled primary"))} ~text])
+              (elmalike/latest (:text-$ sources)))}))
 
 (defn TextInput
   [sources]
-  (let [value-$ 
-        (elmalike/start-with ""
+  (let [scope (gensym)
+        dom-source-$ (recurrent.drivers.dom/isolate-source scope (:dom-$ sources))
+        value-$ 
+        (elmalike/start-with "start!"
                              (elmalike/map
-                               (fn [e] (.-value (.-selectedTarget e)))
-                               (((:dom-$ sources) "input") "onkeydown")))]
+                               (fn [e] 
+                                 (.-value (.-selectedTarget e)))
+                               ((dom-source-$ "input") "keydown")))]
     {:value-$ value-$
      :css-$ (elmalike/map
               (fn [[left-icon right-icon]]
@@ -103,26 +108,29 @@
                   (:left-icon-$ sources)
                   (:right-icon-$ sources))))
      :dom-$
-     (elmalike/map
-       (fn [[is-error? label left-icon right-icon placeholder value]]
-         `[:div {:class "text-input"}
-           ~(if label `[:label ~label])
-           [:input {:class ~(if is-error? "error")
-                    :placeholder ~placeholder
-                    :value ~value}]])
-       (elmalike/latest
-         (:is-error?-$ sources)
-         (:label-$ sources)
-         (:left-icon-$ sources)
-         (:right-icon-$ sources)
-         (:placeholder-$ sources)
-         value-$))}))
+     (recurrent.drivers.dom/isolate-sink scope
+       (elmalike/map
+         (fn [[is-error? label left-icon right-icon placeholder value]]
+           `[:div {:class "text-input"}
+             ~(if label `[:label ~label])
+             [:input {:class ~(if is-error? "error")
+                      :placeholder ~placeholder
+                      :value ~value}]])
+         (elmalike/latest
+           (:is-error?-$ sources)
+           (:label-$ sources)
+           (:left-icon-$ sources)
+           (:right-icon-$ sources)
+           (:placeholder-$ sources)
+           value-$)))}))
 
 (defn DropDown
   [sources]
-  (let [value-$ (elmalike/map
+  (let [scope (gensym)
+        dom-source-$ (recurrent.drivers.dom/isolate-source scope (:dom-$ sources))
+        value-$ (elmalike/map
                   (fn [e] (dommy/text (.-selectedTarget e)))
-                  (((:dom-$ sources) ".drawer-item") "click"))
+                  ((dom-source-$ ".drawer-item") "click"))
         is-open?-$ (elmalike/foldp not false 
                                    (elmalike/merge
                                      (((:dom-$ sources) ".value") "click")
@@ -194,16 +202,18 @@
 
 (defn RangeInput
   [props sources]
-  (let [mouse-x-$
+  (let [scope (gensym)
+        dom-source-$ (recurrent.drivers.dom/isolate-source scope (:dom-$ sources))
+        mouse-x-$
         (elmalike/map
           (fn [e] 
             (println "x: " (.-offsetX e))
             (.-offsetX e))
-          (((:dom-$ sources) ".range-input") "mousemove"))
+          ((dom-source-$ ".range-input") "mousemove"))
         circle-x-$ (elmalike/start-with 0
                                         (elmalike/sample-between
                                           mouse-x-$
-                                          (((:dom-$ sources) ".range-input") "mousedown")
+                                          ((dom-source-$ ".range-input") "mousedown")
                                           elmalike.mouse/mouseup-events))]
 
     {:css-$
@@ -239,7 +249,9 @@
 
 (defn SwitchToggle
   [sources]
-  (let [on?-$ (elmalike/foldp not false (((:dom-$ sources) ".switch-toggle") "click"))]
+  (let [scope (gensym)
+        dom-source-$ (recurrent.drivers.dom/isolate-source scope (:dom-$ sources))
+        on?-$ (elmalike/foldp not false ((dom-source-$ ".switch-toggle") "click"))]
     {:css-$ (elmalike/map
               (fn [on?]
                 [:.switch-toggle {:position "relative"
@@ -286,11 +298,13 @@
                              :dom-$ (:dom-$ sources)})
         button (Button {:primary? true}
                        {:dom-$ (:dom-$ sources)
-                        :text-$ (elmalike/signal-of "Click Me!")})
+                        :text-$ (:value-$ regular-text-input)})
         range-input (RangeInput {} {:dom-$ (:dom-$ sources)
                                     :css-$ (:css-$ sources)})
         switch-toggle (SwitchToggle {:dom-$ (:dom-$ sources)
                                      :css-$ (:css-$ sources)})]
+
+    (elmalike/subscribe-next (:dom-$ regular-text-input) println)
 
     {:css-$ (recurrent.drivers.css/collect :css-$
               regular-text-input
