@@ -17,6 +17,8 @@
 (def COLORS
   {:error "#FE001E"
    :primary "#FB00A7"
+   :primary-alt {:dark "#7f0056"
+                 :darker "#40002b"}
    :secondary "#00F4CB"
    :success "#00F4CB"
    :warning "#FFCD00"
